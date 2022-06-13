@@ -90,7 +90,8 @@ Host gitlab.com
   #IdentityFile ~/.ssh/
   IdentitiesOnly yes
   LogLevel FATAL
-"@  | Out-File $env:HOMEPATH/.ssh/config
+"@  | Out-File -Encoding ASCII $env:HOMEPATH/.ssh/config
+    # NOTE: -Encoding ASCII: Avoiding BOM under PowerShell6
     #ssh-keygen -t ed25519 -C "e-mail address"
     Write-Host "-> $env:HOMEPATH/.ssh/config was created."
   } else {
