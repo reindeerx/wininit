@@ -1,0 +1,117 @@
+############################################################
+# Initialize
+############################################################
+$ErrorActionPreference = 'Stop'
+if ($PSVersionTable.PSVersion.Major -ge 7){
+  Import-Module Appx -UseWindowsPowerShell -WarningAction SilentlyContinue
+}
+
+############################################################
+# Definitons
+############################################################
+# NOTE: https://github.com/microsoft/winget-cli/releases/latest
+$wingetUrl = "https://github.com/microsoft/winget-cli/releases/download/v1.2.10271/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+$packagesWinGet = @(
+   ,'Git.Git'
+   ,'7zip.7zip'
+   ,'Microsoft.PowerShell'
+   ,'gerardog.gsudo'
+)
+$MyProjectRoot = "c:/Home/Projects"
+
+############################################################
+# Functions
+############################################################
+function Install-WinPackageManagement(){
+  Write-Host 'Installing Windows Package Manager:'
+  Install-WinGet
+  Write-Host ''
+}
+
+function Install-WinGet(){
+  Write-Host '->Installing WinGet'
+  if (!(Get-AppxPackage | Select-String "Microsoft.Winget.Source")){
+    $tempPath = [IO.Path]::GetTempPath()
+    $outFilePath = $tempPath + [System.IO.Path]::GetFileName($wingetUrl)
+    Invoke-WebRequest -Uri $wingetUrl -OutFile $outFilePath -UseBasicParsing
+    add-appxpackage -Path $outFilePath
+  } else {
+    Write-Host '-> WinGet is already installed.'
+  }
+  Write-Host ''
+}
+
+function  Install-WinApps {
+  Install-WinAppsByWinGet
+}
+
+function  Install-WinAppsByWinGet {
+  Write-Host 'Installing applications [WinGet]:'
+  $packagesWinGet | ForEach-Object {
+    $pkg = "$_"
+    Write-Host "-> $pkg"
+    if (!(winget list | Select-String $pkg)){
+      # NOTE: https://docs.microsoft.com/ja-jp/windows/package-manager/winget/install#options
+      winget install --exact --id $pkg
+    } else {
+      Write-Host "$pkg is already installed."
+    }
+  }
+  Write-Host ''
+}
+
+function  Setup-SSH {
+  Write-Host 'Creating ssh config file.'
+  if (!(Test-Path $env:HOMEPATH/.ssh/config)) {
+    New-Item -Path "$env:HOMEPATH/.ssh" -Type Directory
+
+    # Create .ssh/config
+    Write-Output @"
+    Host github.com
+      User git
+      Port 22
+      IdentityFile ~/.ssh/github
+      IdentitiesOnly yes
+      LogLevel FATAL
+    
+    Host gitlab.com
+      User git
+      Port 22
+      #IdentityFile ~/.ssh/
+      IdentitiesOnly yes
+      LogLevel FATAL
+"@  | Out-File $env:HOMEPATH/.ssh/config
+    #ssh-keygen -t ed25519 -C "メールアドレス"
+    Write-Host "-> $env:HOMEPATH/.ssh/config was created."
+  } else {
+    Write-Host '-> Nothing was done.'
+  }
+  Write-Host ''
+}
+function  Create-ProjectRoot {
+  Write-Host 'Creating Project Root Directory.'
+  if (!(Test-Path $MyProjectRoot)) {
+    New-Item -Path "$MyProjectRoot" -Type Directory
+  }
+  Write-Host ''
+}
+
+function  Setup-Git {
+  Write-Host 'Setting up git.'
+  # update git path
+  $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+  git config --global core.autocrlf false
+  Write-Host ''
+}
+############################################################
+# Main
+############################################################
+Set-Location -Path $PSScriptRoot
+
+Install-WinPackageManagement
+Install-WinApps
+Setup-Git
+Setup-SSH
+Create-ProjectRoot
+
+Write-Host '*** Done! ***'
