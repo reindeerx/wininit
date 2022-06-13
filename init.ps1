@@ -73,7 +73,7 @@ function  Install-WinAppsByWinGet {
 function  Setup-SSH {
   Write-Host 'Creating ssh config file.'
   if (!(Test-Path $env:HOMEPATH/.ssh/config)) {
-    New-Item -Path "$env:HOMEPATH/.ssh" -Type Directory
+    New-Item -Path "$env:HOMEPATH/.ssh" -Type Directory -Force
 
     # Create .ssh/config
     Write-Output @"
