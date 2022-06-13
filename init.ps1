@@ -11,6 +11,8 @@ if ($PSVersionTable.PSVersion.Major -ge 7){
 ############################################################
 # NOTE: https://github.com/microsoft/winget-cli/releases/latest
 $wingetUrl = "https://github.com/microsoft/winget-cli/releases/download/v1.2.10271/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+# NOTE: https://docs.microsoft.com/ja-jp/troubleshoot/developer/visualstudio/cpp/libraries/c-runtime-packages-desktop-bridge#how-to-install-and-update-desktop-framework-packages
+$vcLibsUrl = "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx"
 $packagesWinGet = @(
    ,'Git.Git'
    ,'7zip.7zip'
@@ -32,9 +34,17 @@ function Install-WinGet(){
   Write-Host '->Installing WinGet'
   if (!(Get-AppxPackage | Select-String "Microsoft.Winget.Source")){
     $tempPath = [IO.Path]::GetTempPath()
+    # VCLibs (prerequisites)
+    $outFilePath = $tempPath + [System.IO.Path]::GetFileName($vcLibsUrl)
+    Invoke-WebRequest -Uri $vcLibsUrl -OutFile $outFilePath -UseBasicParsing
+    add-appxpackage -Path $outFilePath
+    # WinGet
     $outFilePath = $tempPath + [System.IO.Path]::GetFileName($wingetUrl)
     Invoke-WebRequest -Uri $wingetUrl -OutFile $outFilePath -UseBasicParsing
     add-appxpackage -Path $outFilePath
+    # agree to the Terms of Use 
+    ECHO 'Y' | winget list
+    Write-Host '-> WinGet has been installed.'
   } else {
     Write-Host '-> WinGet is already installed.'
   }
@@ -67,21 +77,21 @@ function  Setup-SSH {
 
     # Create .ssh/config
     Write-Output @"
-    Host github.com
-      User git
-      Port 22
-      IdentityFile ~/.ssh/github
-      IdentitiesOnly yes
-      LogLevel FATAL
-    
-    Host gitlab.com
-      User git
-      Port 22
-      #IdentityFile ~/.ssh/
-      IdentitiesOnly yes
-      LogLevel FATAL
+Host github.com
+  User git
+  Port 22
+  IdentityFile ~/.ssh/github
+  IdentitiesOnly yes
+  LogLevel FATAL
+
+Host gitlab.com
+  User git
+  Port 22
+  #IdentityFile ~/.ssh/
+  IdentitiesOnly yes
+  LogLevel FATAL
 "@  | Out-File $env:HOMEPATH/.ssh/config
-    #ssh-keygen -t ed25519 -C "メールアドレス"
+    #ssh-keygen -t ed25519 -C "e-mail address"
     Write-Host "-> $env:HOMEPATH/.ssh/config was created."
   } else {
     Write-Host '-> Nothing was done.'
